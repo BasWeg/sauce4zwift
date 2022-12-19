@@ -302,6 +302,7 @@ export class StatsProcessor extends events.EventEmitter {
         this._profileFetchIds = new Set();
         this._pendingProfileFetches = [];
         this._profileFetchCount = 0;
+        this._profileFetchBackoff = 100;
         this._chatHistory = [];
         this._recentEvents = new Map();
         this._recentEventSubgroups = new Map();
@@ -1023,10 +1024,16 @@ export class StatsProcessor extends events.EventEmitter {
             this._profileFetchCount += batch.length;
             try {
                 await this._updateAthleteProfilesFromServer(batch);
+                this._profileFetchBackoff = 100;
             } catch(e) {
-                console.error("Error while collecting profiles from server:", e);
+                if (e.name === 'FetchError') {
+                    console.warn("Network problem while collecting profiles:", e.message);
+                } else {
+                    console.error("Error while collecting profiles:", e);
+                }
+                this._profileFetchBackoff *= 1.5;
             }
-            await sauce.sleep(100);
+            await sauce.sleep(this._profileFetchBackoff);
         }
     }
 
@@ -1374,7 +1381,13 @@ export class StatsProcessor extends events.EventEmitter {
             console.warn("Skipping social network update because not logged into zwift");
             return;
         }
-        this.__zwiftMetaSync().finally(() => {
+        this.__zwiftMetaSync().catch(e => {
+            if (e.name !== 'FetchError') {
+                report.errorThrottled(e);
+            } else {
+                console.warn('Zwift Meta Sync network problem:', e.message);
+            }
+        }).finally(() => {
             // The event feed APIs are horribly broken so we need to refresh more often
             // at startup to try and fill in the gaps.
             this._zwiftMetaId = setTimeout(() => this._zwiftMetaSync(), this._zwiftMetaRefresh);

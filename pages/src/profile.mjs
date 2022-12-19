@@ -26,6 +26,7 @@ export async function main() {
     const athlete = await gettingAthlete;
     if (athlete) {
         document.title = `${athlete.sanitizedFullname} - Sauce for Zwift™`;
+        athlete.cp = athlete.cp || athlete.ftp;
     }
     const tpl = await gettingTemplate;
     const gameConnectionStatus = await gettingGameConnectionStatus;
@@ -51,7 +52,6 @@ function handleInlineEdit(el, {athleteId, athlete}, rerender) {
     const input = document.createElement('input');
     input.type = type;
     input.value = athlete[key];
-    input.classList.add('no-increment');
     el.replaceChildren(input);
     let done;
     input.focus();

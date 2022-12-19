@@ -2,7 +2,10 @@
 import {sleep as _sleep} from '../../shared/sauce/base.mjs';
 import * as locale from '../../shared/sauce/locale.mjs';
 import * as report from '../../shared/report.mjs';
+import * as elements from './custom-elements.mjs';
 import './sentry.js';
+
+export const sleep = _sleep; // Come on ES6 modules, really!?
 
 if (!Array.prototype.at) {
     // Old browsers like chromium 86 used by vmix.
@@ -11,8 +14,6 @@ if (!Array.prototype.at) {
         return idx < 0 ? this[this.length + idx] : this[idx];
     };
 }
-
-export const sleep = _sleep; // Come on ES6 modules, really!?
 
 const doc = document.documentElement;
 
@@ -819,22 +820,30 @@ function bindFormData(selector, storageIface, options={}) {
             fieldConnections.get(name).add(el);
             const val = await storageIface.get(name);
             if (el.type === 'checkbox') {
-                el.checked = val;
+                if (val !== undefined) {
+                    el.checked = val;
+                }
             } else {
-                el.value = val == null ? '' : val;
+                if (val !== undefined) {
+                    el.value = val == null ? '' : val;
+                }
             }
         }
         for (const el of form.querySelectorAll('select')) {
             const name = el.name;
             const val = await storageIface.get(name);
-            el.value = val == null ? '' : val;
+            if (val !== undefined) {
+                el.value = val == null ? '' : val;
+            }
         }
         for (const el of form.querySelectorAll('.display-field[name]')) {
             const name = el.getAttribute('name');
             const val = await storageIface.get(name);
-            el.textContent = val;
-            if (el.hasAttribute('href')) {
-                el.href = val;
+            if (val !== undefined) {
+                el.textContent = val;
+                if (el.hasAttribute('href')) {
+                    el.href = val;
+                }
             }
         }
         for (const el of form.querySelectorAll('[data-depends-on]')) {
@@ -1082,6 +1091,14 @@ export function initExpanderTable(table, expandCallback, cleanupCallback) {
             }
         }
     });
+}
+
+
+export function addTheme(entry) {
+    elements.themes.push(entry);
+    for (const el of document.querySelectorAll('select[is="sauce-theme"]')) {
+        el.update();
+    }
 }
 
 
